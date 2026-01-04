@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Hierarchy Speed Comparison</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .controls {
+            max-width: 800px;
+            margin: 20px auto;
+            text-align: center;
+        }
+        .lane-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .lane {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+        }
+        .label {
+            width: 100px;
+            font-weight: bold;
+            text-align: right;
+            padding-right: 10px;
+        }
+        .track {
+            flex: 1;
+            height: 20px;
+            background-color: #e0e0e0;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            background-color: #007bff;
+            border-radius: 50%;
+            position: absolute;
+            top: 5px;
+            left: 0;
+            transition: left linear;
+        }
+    </style>
+</head>
+<body>
+    <h1>Memory Hierarchy Speed Comparison</h1>
+    <p>This visualization shows dots moving back and forth on parallel lanes representing different memory types. The speed of each dot is inversely proportional to the typical latency of that memory type. Faster memories (lower latency) have faster-moving dots.</p>
+    <p>Approximate latencies used (in nanoseconds):<br>
+    - L1 Cache: 1 ns<br>
+    - L2 Cache: 4 ns<br>
+    - L3 Cache: 15 ns<br>
+    - DRAM: 60 ns<br>
+    - SSD: 150,000 ns<br>
+    - HDD: 5,000,000 ns</p>
+    <p>Note: Speeds are scaled for visualization; the actual differences are vast, so we've normalized them relative to HDD taking about 10 seconds for a full back-and-forth cycle. You can adjust the animation speed multiplier to slow down or speed up the entire visualization (smaller values make it slower, allowing better observation of the L1 cache reference speed).</p>
+
+    <div class="controls">
+        <label for="speed-multiplier">Animation Speed Multiplier (1 = normal, <1 = slower, >1 = faster):</label>
+        <input type="number" id="speed-multiplier" min="0.1" max="10" value="0,000001">
+    </div>
+
+    <div class="lane-container">
+        <div class="lane">
+            <div class="label">L1 Cache</div>
+            <div class="track">
+                <div class="dot" id="dot-l1"></div>
+            </div>
+        </div>
+        <div class="lane">
+            <div class="label">L2 Cache</div>
+            <div class="track">
+                <div class="dot" id="dot-l2"></div>
+            </div>
+        </div>
+        <div class="lane">
+            <div class="label">L3 Cache</div>
+            <div class="track">
+                <div class="dot" id="dot-l3"></div>
+            </div>
+        </div>
+        <div class="lane">
+            <div class="label">DRAM</div>
+            <div class="track">
+                <div class="dot" id="dot-dram"></div>
+            </div>
+        </div>
+        <div class="lane">
+            <div class="label">SSD</div>
+            <div class="track">
+                <div class="dot" id="dot-ssd"></div>
+            </div>
+        </div>
+        <div class="lane">
+            <div class="label">HDD</div>
+            <div class="track">
+                <div class="dot" id="dot-hdd"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Approximate latencies in ns (relative)
+        const latencies = {
+            l1: 1,
+            l2: 4,
+            l3: 15,
+            dram: 60,
+            ssd: 150000,
+            hdd: 5000000
+        };
+
+        // Find the maximum latency to normalize speeds
+        const maxLatency = latencies.hdd;
+
+        // Cycle time for the slowest (HDD) in ms (back and forth)
+        const baseCycleTime = 10000; // 10 seconds for HDD full cycle (to and fro)
+
+        // Mutable speed multiplier
+        const speedMultiplier = { value: 1 };
+
+        // Listen for changes to the speed multiplier input
+        document.getElementById('speed-multiplier').addEventListener('input', (e) => {
+            speedMultiplier.value = parseFloat(e.target.value) || 1;
+        });
+
+        // Track width (assuming track is 100% width, but we'll get it dynamically)
+        function animateDot(id, latency) {
+            const dot = document.getElementById(`dot-${id}`);
+            const track = dot.parentElement;
+            const trackWidth = track.offsetWidth - 10; // Subtract dot width
+
+            // Speed factor: inversely proportional to latency, normalized to HDD
+            const speedFactor = maxLatency / latency;
+
+            let position = 0;
+            let direction = 1; // 1: right, -1: left
+
+            function animate() {
+                // Dynamically compute current oneWayTime based on current speed multiplier
+                const baseOneWayTime = (baseCycleTime / 2) / speedFactor;
+                const currentOneWayTime = baseOneWayTime / speedMultiplier.value; // Higher multiplier = smaller time = faster
+                const increment = trackWidth / (currentOneWayTime / 16); // Approx 60fps
+
+                position += direction * increment;
+                if (position >= trackWidth) {
+                    position = trackWidth;
+                    direction = -1;
+                } else if (position <= 0) {
+                    position = 0;
+                    direction = 1;
+                }
+                dot.style.left = `${position}px`;
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // Start animations
+        animateDot('l1', latencies.l1);
+        animateDot('l2', latencies.l2);
+        animateDot('l3', latencies.l3);
+        animateDot('dram', latencies.dram);
+        animateDot('ssd', latencies.ssd);
+        animateDot('hdd', latencies.hdd);
+    </script>
+</body>
+</html>
