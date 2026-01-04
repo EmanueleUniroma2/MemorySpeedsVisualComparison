@@ -3,180 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory Hierarchy Speed Comparison</title>
+    <title>Memory Hierarchy Speed Visualizer</title>
     <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --primary: #38bdf8;
+            /* Heat colors */
+            --color-l1: #ff4d4d;
+            --color-l2: #ff8c42;
+            --color-l3: #ffcc33;
+            --color-dram: #48bb78;
+            --color-ssd: #4299e1;
+            --color-hdd: #9f7aea;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            padding: 40px 20px;
+            line-height: 1.5;
         }
-        h1 {
-            text-align: center;
-        }
-        .controls {
-            max-width: 800px;
-            margin: 20px auto;
-            text-align: center;
-        }
-        .lane-container {
-            max-width: 800px;
+
+        .container {
+            max-width: 900px;
             margin: 0 auto;
         }
-        .lane {
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .description {
+            color: var(--text-dim);
+            max-width: 600px;
+            margin: 0 auto 20px;
+        }
+
+        .controls {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        input[type="number"] {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--primary);
+        }
+
+        .lane-card {
+            background: var(--card-bg);
+            margin-bottom: 12px;
+            padding: 15px 20px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
-            margin: 20px 0;
-            border: 1px solid #ccc;
-            padding: 10px;
-            background-color: white;
-            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .label {
-            width: 100px;
-            font-weight: bold;
-            text-align: right;
-            padding-right: 10px;
+
+        .label-box {
+            width: 120px;
+            flex-shrink: 0;
         }
+
+        .label-name {
+            display: block;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .label-latency {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: monospace;
+        }
+
         .track {
-            flex: 1;
-            height: 20px;
-            background-color: #e0e0e0;
-            position: relative;
+            flex-grow: 1;
+            height: 8px;
+            background: #0f172a;
             border-radius: 10px;
-            overflow: hidden;
+            position: relative;
+            margin-left: 20px;
+            overflow: visible;
         }
+
         .dot {
-            width: 10px;
-            height: 10px;
-            background-color: #007bff;
+            width: 14px;
+            height: 14px;
+            background-color: var(--primary);
             border-radius: 50%;
             position: absolute;
-            top: 5px;
+            top: 50%;
             left: 0;
-            transition: left linear;
+            transform: translateY(-50%);
+            box-shadow: 0 0 15px var(--primary);
+            will-change: left;
+        }
+
+        /* Color Coding */
+        #dot-l1 { --primary: var(--color-l1); }
+        #dot-l2 { --primary: var(--color-l2); }
+        #dot-l3 { --primary: var(--color-l3); }
+        #dot-dram { --primary: var(--color-dram); }
+        #dot-ssd { --primary: var(--color-ssd); }
+        #dot-hdd { --primary: var(--color-hdd); }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-dim);
         }
     </style>
 </head>
 <body>
-    <h1>Memory Hierarchy Speed Comparison</h1>
-    <p>This visualization shows dots moving back and forth on parallel lanes representing different memory types. The speed of each dot is inversely proportional to the typical latency of that memory type. Faster memories (lower latency) have faster-moving dots.</p>
-    <p>Approximate latencies used (in nanoseconds):<br>
-    - L1 Cache: 1 ns<br>
-    - L2 Cache: 4 ns<br>
-    - L3 Cache: 15 ns<br>
-    - DRAM: 60 ns<br>
-    - SSD: 150,000 ns<br>
-    - HDD: 5,000,000 ns</p>
+
+<div class="container">
+    <header>
+        <h1>Memory Speed Visualizer</h1>
+        <p class="description">
+            Comparing memory latencies visually. If the HDD dot moved 1 meter, 
+            the L1 Cache dot would move 5,000 kilometers in the same time.
+        </p>
+    </header>
 
     <div class="controls">
-        <label for="speed-multiplier">Animation Speed Multiplier (1 = normal, <1 = slower, >1 = faster):</label>
-        <input style="min-width: 15rem;" type="number" id="speed-multiplier" min="0.0000001" max="1" value="0.000001">
-    </div>
-
-    <div class="lane-container">
-        <div class="lane">
-            <div class="label">L1 Cache</div>
-            <div class="track">
-                <div class="dot" id="dot-l1"></div>
-            </div>
-        </div>
-        <div class="lane">
-            <div class="label">L2 Cache</div>
-            <div class="track">
-                <div class="dot" id="dot-l2"></div>
-            </div>
-        </div>
-        <div class="lane">
-            <div class="label">L3 Cache</div>
-            <div class="track">
-                <div class="dot" id="dot-l3"></div>
-            </div>
-        </div>
-        <div class="lane">
-            <div class="label">DRAM</div>
-            <div class="track">
-                <div class="dot" id="dot-dram"></div>
-            </div>
-        </div>
-        <div class="lane">
-            <div class="label">SSD</div>
-            <div class="track">
-                <div class="dot" id="dot-ssd"></div>
-            </div>
-        </div>
-        <div class="lane">
-            <div class="label">HDD</div>
-            <div class="track">
-                <div class="dot" id="dot-hdd"></div>
-            </div>
+        <div class="input-group">
+            <label for="speed-multiplier">Animation Speed Multiplier (Precision Support)</label>
+            <input 
+                type="number" 
+                id="speed-multiplier" 
+                lang="en-US" 
+                step="any" 
+                min="0.0000001" 
+                max="10" 
+                value="0.000001"
+            >
         </div>
     </div>
 
-    <script>
-        // Approximate latencies in ns (relative)
-        const latencies = {
-            l1: 1,
-            l2: 4,
-            l3: 15,
-            dram: 60,
-            ssd: 150000,
-            hdd: 5000000
-        };
+    <div id="lanes">
+        </div>
 
-        // Find the maximum latency to normalize speeds
-        const maxLatency = latencies.hdd;
+    <footer>
+        Data based on typical modern x86 architecture latencies.
+    </footer>
+</div>
 
-        // Cycle time for the slowest (HDD) in ms (back and forth)
-        const baseCycleTime = 10000; // 10 seconds for HDD full cycle (to and fro)
+<script>
+    const data = [
+        { id: 'l1', name: 'L1 Cache', latency: 1, color: 'var(--color-l1)' },
+        { id: 'l2', name: 'L2 Cache', latency: 4, color: 'var(--color-l2)' },
+        { id: 'l3', name: 'L3 Cache', latency: 15, color: 'var(--color-l3)' },
+        { id: 'dram', name: 'DRAM (RAM)', latency: 60, color: 'var(--color-dram)' },
+        { id: 'ssd', name: 'NVMe SSD', latency: 150000, color: 'var(--color-ssd)' },
+        { id: 'hdd', name: 'SATA HDD', latency: 5000000, color: 'var(--color-hdd)' }
+    ];
 
-        // Mutable speed multiplier
-        const speedMultiplier = { value: 1 };
+    const lanesContainer = document.getElementById('lanes');
+    const input = document.getElementById('speed-multiplier');
+    
+    // State
+    const maxLatency = 5000000;
+    const baseCycleTime = 10000; // 10s for HDD
+    let multiplier = parseFloat(input.value) || 0.000001;
 
-        // Listen for changes to the speed multiplier input
-        document.getElementById('speed-multiplier').addEventListener('input', (e) => {
-            speedMultiplier.value = parseFloat(e.target.value) || 0.000001;
+    // Build the UI
+    data.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'lane-card';
+        card.innerHTML = `
+            <div class="label-box">
+                <span class="label-name" style="color: ${item.color}">${item.name}</span>
+                <span class="label-latency">${item.latency.toLocaleString()} ns</span>
+            </div>
+            <div class="track">
+                <div class="dot" id="dot-${item.id}"></div>
+            </div>
+        `;
+        lanesContainer.appendChild(card);
+    });
+
+    // Handle input
+    input.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (!isNaN(val) && val > 0) {
+            multiplier = val;
+        }
+    });
+
+    // Animation Loop
+    let lastTime = 0;
+    const states = data.map(item => ({
+        id: item.id,
+        latency: item.latency,
+        pos: 0,
+        dir: 1
+    }));
+
+    function update(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const deltaTime = timestamp - lastTime;
+        lastTime = timestamp;
+
+        states.forEach(state => {
+            const dot = document.getElementById(`dot-${state.id}`);
+            const track = dot.parentElement;
+            const trackWidth = track.offsetWidth - 14;
+
+            // Calculate speed
+            const speedFactor = maxLatency / state.latency;
+            const oneWayTime = ((baseCycleTime / 2) / speedFactor) / multiplier;
+            
+            // Increment based on real time passed (ms)
+            const step = (trackWidth / oneWayTime) * deltaTime;
+            
+            state.pos += state.dir * step;
+
+            // Bounds check
+            if (state.pos >= trackWidth) {
+                state.pos = trackWidth;
+                state.dir = -1;
+            } else if (state.pos <= 0) {
+                state.pos = 0;
+                state.dir = 1;
+            }
+
+            dot.style.transform = `translate3d(${state.pos}px, -50%, 0)`;
         });
 
-        // Track width (assuming track is 100% width, but we'll get it dynamically)
-        function animateDot(id, latency) {
-            const dot = document.getElementById(`dot-${id}`);
-            const track = dot.parentElement;
-            const trackWidth = track.offsetWidth - 10; // Subtract dot width
+        requestAnimationFrame(update);
+    }
 
-            // Speed factor: inversely proportional to latency, normalized to HDD
-            const speedFactor = maxLatency / latency;
+    requestAnimationFrame(update);
+</script>
 
-            let position = 0;
-            let direction = 1; // 1: right, -1: left
-
-            function animate() {
-                // Dynamically compute current oneWayTime based on current speed multiplier
-                const baseOneWayTime = (baseCycleTime / 2) / speedFactor;
-                const currentOneWayTime = baseOneWayTime / speedMultiplier.value; // Higher multiplier = smaller time = faster
-                const increment = trackWidth / (currentOneWayTime / 16); // Approx 60fps
-
-                position += direction * increment;
-                if (position >= trackWidth) {
-                    position = trackWidth;
-                    direction = -1;
-                } else if (position <= 0) {
-                    position = 0;
-                    direction = 1;
-                }
-                dot.style.left = `${position}px`;
-                requestAnimationFrame(animate);
-            }
-            animate();
-        }
-
-        // Start animations
-        animateDot('l1', latencies.l1);
-        animateDot('l2', latencies.l2);
-        animateDot('l3', latencies.l3);
-        animateDot('dram', latencies.dram);
-        animateDot('ssd', latencies.ssd);
-        animateDot('hdd', latencies.hdd);
-    </script>
 </body>
 </html>
