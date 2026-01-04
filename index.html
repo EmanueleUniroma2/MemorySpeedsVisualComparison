@@ -170,9 +170,6 @@
 
     <div class="controls">
         <div class="input-group">
-            <label for="speed-multiplier">Animation Speed Level</label>
-            <br/>
-            <label>1 is the base speed, each next level doubles the speed of the previous)</label>
             <input 
                 type="range" 
                 id="speed-multiplier" 
@@ -181,7 +178,8 @@
                 step="1" 
                 value="1"
             >
-            <div class="speed-display">Level: <span id="level-val">1</span></div>
+            <div class="speed-display">Speed Level: <span id="level-val">1</span></div>
+            <label for="speed-multiplier">Each level is double the speed of the previous.</label>
         </div>
     </div>
 
